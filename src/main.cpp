@@ -5,12 +5,11 @@
 
 Servo servo;
 
-const char* user = "";
-const char* pass = "";
-const char* broker = "192.168.1.8";
+const char *user = "";
+const char *pass = "";
+const char *broker = "192.168.1.11";
 
-const char* outTopic = "control/out";
-const char* inTopic = "control/in";
+const char *legA = "LEG/A";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -19,10 +18,11 @@ long currentTime, lastTime;
 int count = 0;
 char message[50];
 
-void setupWifi() {
+void setupWifi()
+{
   Serial.println("Connection \n");
   WiFi.mode(WIFI_STA);
-  WiFi.begin("HAKIM", "ELSHIRAZI");
+  WiFi.begin("Kreatifindo", "Kreatifindo666");
   while (WiFi.status() != WL_CONNECTED)
   {
     delay(1000);
@@ -33,30 +33,66 @@ void setupWifi() {
   Serial.println(WiFi.localIP());
 }
 
-void reconnect() {
-  while(!client.connected()){
+void reconnect()
+{
+  while (!client.connected())
+  {
     Serial.print("\nConnecting to");
     Serial.println(broker);
     if (client.connect("esp8266", user, pass))
     {
       Serial.print("\nConnected to ");
       Serial.println(broker);
-      client.subscribe(inTopic);
-    }else{
+      client.subscribe(legA);
+    }
+    else
+    {
       Serial.println("\nTrying connect again..");
       delay(5000);
     }
   }
 }
 
-void callback(char* topic, byte* payload, unsigned int length) {
+String byteToString(byte data[], unsigned int len)
+{
+    int a = (int) len;
+    char result[a];
+    for(int i = 0; i < a;i++){
+      result[i] = (char) data[i];
+    }
+    result[a] = '\0'; // make last element null
+
+    return result;
+}
+
+byte received_payload[128];
+void callback(char *topic, byte *payload, unsigned int length)
+{
   Serial.print("Received messages: ");
   Serial.println(topic);
   for (int i = 0; i < length; i++)
   {
-    Serial.print((char) payload[i]);
+    Serial.print((char)payload[i]);
   }
-  Serial.println();  
+  Serial.println();
+
+  String topicStr(topic);
+  if (topicStr == legA)
+  {
+    Serial.println("move leg A ");
+    if ((char)payload[0] == '1')
+    {
+      servo.write(180);
+      delay(500);
+      servo.write(0);
+    }
+  }
+
+  memcpy(received_payload, payload, length);
+  
+  String cmd = byteToString(payload, length);
+  Serial.println(cmd);
+
 }
 
 void setup()
@@ -80,21 +116,4 @@ void loop()
     reconnect();
   }
   client.loop();
-  
-  // currentTime = millis();
-  // if (currentTime - lastTime > 2000)
-  // {
-  //   count++;
-  //   snprintf(message, 75, "Count: %ld", count);
-  //   Serial.print("Sending message: ");
-  //   Serial.println(message);
-  //   client.publish(outTopic, message);
-  //   lastTime = millis();
-  // }
-  
-
-  // servo.write(90);
-  // delay(1000);
-  // servo.write(10);
-  // delay(5000);
 }
